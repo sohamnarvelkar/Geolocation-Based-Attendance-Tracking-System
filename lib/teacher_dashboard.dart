@@ -11,6 +11,9 @@ import 'package:path_provider/path_provider.dart';
 import 'attendance_list_screen.dart';
 import 'past_classes_screen.dart';
 import 'teacher_students_screen.dart';
+import 'map_screen.dart';
+import 'login_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class TeacherDashboard extends StatefulWidget {
   final String name;
@@ -31,6 +34,9 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   DateTime? startTime;
   DateTime? endTime;
 
+  double? teacherLat;
+  double? teacherLng;
+
   // 🔥 CREATE CLASS
   Future<void> createClass() async {
     setState(() => loading = true);
@@ -38,6 +44,9 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     try {
       await Geolocator.requestPermission();
       Position position = await Geolocator.getCurrentPosition();
+
+      teacherLat = position.latitude;
+      teacherLng = position.longitude;
 
       String id = DateTime.now().millisecondsSinceEpoch.toString();
       startTime = DateTime.now();
@@ -53,7 +62,6 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         "endTime": null,
       });
 
-      // 🔥 QR SAFE DATA
       qrData = jsonEncode({
         "classId": id,
         "latitude": position.latitude,
@@ -74,7 +82,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     setState(() => loading = false);
   }
 
-  // 🔥 CLOSE QR (UPDATED)
+  // 🔥 CLOSE QR
   Future<void> closeQr() async {
     endTime = DateTime.now();
 
@@ -82,7 +90,6 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
       "endTime": endTime,
     });
 
-    // 🔥 HIDE QR AFTER CLOSING
     setState(() {
       qrData = null;
     });
@@ -92,7 +99,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     ).showSnackBar(const SnackBar(content: Text("QR Closed ⛔")));
   }
 
-  // 🔥 PERFECT QR SHARE (NO CUTTING)
+  // 🔥 SHARE QR
   Future<void> shareQrImage() async {
     try {
       const int qrSize = 500;
@@ -113,11 +120,9 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
 
       final totalSize = qrSize + (margin * 2);
 
-      // 🔥 WHITE BACKGROUND
       final paint = Paint()..color = Colors.white;
       canvas.drawRect(Rect.fromLTWH(0, 0, totalSize, totalSize), paint);
 
-      // 🔥 CENTER QR
       canvas.drawImage(qrImage, Offset(margin, margin), Paint());
 
       final picture = recorder.endRecording();
@@ -143,6 +148,37 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     }
   }
 
+  void openMap() async {
+    if (teacherLat == null || teacherLng == null) return;
+
+    List<Map<String, double>> students = [];
+
+    try {
+      var snapshot = await FirebaseFirestore.instance
+          .collection("attendance")
+          .where("classId", isEqualTo: classId)
+          .get();
+
+      for (var doc in snapshot.docs) {
+        var data = doc.data();
+        students.add({"lat": data["latitude"], "lng": data["longitude"]});
+      }
+    } catch (e) {
+      print(e);
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MapScreen(
+          teacherLat: teacherLat!,
+          teacherLng: teacherLng!,
+          students: students,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -151,7 +187,6 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // 📚 SUBJECT
             TextField(
               controller: subjectController,
               decoration: const InputDecoration(
@@ -162,13 +197,21 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
 
             const SizedBox(height: 20),
 
-            // 🔘 START CLASS
             loading
                 ? const CircularProgressIndicator()
                 : ElevatedButton(
                     onPressed: createClass,
                     child: const Text("Start Class"),
                   ),
+
+            const SizedBox(height: 10),
+
+            // ✅ MAP BUTTON
+            ElevatedButton(
+              onPressed: openMap,
+              child: const Text("View Class Location"),
+            ),
+
             const SizedBox(height: 10),
 
             ElevatedButton(
@@ -186,7 +229,6 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
 
             const SizedBox(height: 10),
 
-            // 📊 PAST ATTENDANCE
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -199,11 +241,9 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
 
             const SizedBox(height: 20),
 
-            // 🔥 QR SECTION
             if (qrData != null)
               Column(
                 children: [
-                  // ✅ PERFECT QR
                   Container(
                     color: Colors.white,
                     padding: const EdgeInsets.all(30),
@@ -251,6 +291,18 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                       },
                       child: const Text("View Attendance"),
                     ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      await FirebaseAuth.instance.signOut();
+
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (_) => LoginScreen()),
+                        (route) => false,
+                      );
+                    },
+                    child: const Text("Logout"),
+                  ),
                 ],
               ),
           ],

@@ -9,13 +9,13 @@ import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart'
     as mlkit;
 
-// 🔥 NEW IMPORTS
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
-// 🔥 ADD THIS IMPORT
 import 'my_attendance_screen.dart';
 import 'attendance_percentage_screen.dart';
+import 'login_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // 🔥 DEVICE ID FUNCTION
 Future<String> getDeviceId() async {
@@ -42,7 +42,7 @@ class _StudentScreenState extends State<StudentScreen> {
   bool scanning = false;
   bool scannedOnce = false;
 
-  // 📍 Attendance Logic (UNCHANGED)
+  // 📍 Attendance Logic (FIXED GPS ISSUE)
   Future<void> markAttendance(String qrData) async {
     try {
       var data = jsonDecode(qrData);
@@ -76,20 +76,34 @@ class _StudentScreenState extends State<StudentScreen> {
 
       await Geolocator.requestPermission();
 
+      // 🔥 FIRST LOCATION
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        desiredAccuracy: LocationAccuracy.best,
+      );
+
+      // 🔥 WAIT FOR BETTER GPS FIX
+      await Future.delayed(const Duration(seconds: 2));
+
+      // 🔥 SECOND LOCATION (MORE ACCURATE)
+      Position updatedPosition = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.best,
       );
 
       double distance = Geolocator.distanceBetween(
         teacherLat,
         teacherLng,
-        position.latitude,
-        position.longitude,
+        updatedPosition.latitude,
+        updatedPosition.longitude,
       );
 
+      print("Teacher: $teacherLat, $teacherLng");
+      print(
+        "Student: ${updatedPosition.latitude}, ${updatedPosition.longitude}",
+      );
       print("Distance: $distance");
 
-      if (distance <= 11) {
+      // 🔥 KEEP DISTANCE = 12 (AS YOU SAID)
+      if (distance <= 12) {
         String studentId = user!.uid;
 
         String deviceId = await getDeviceId();
@@ -126,8 +140,8 @@ class _StudentScreenState extends State<StudentScreen> {
           "studentName": user.email ?? "Student",
           "classId": classId,
           "deviceId": deviceId,
-          "latitude": position.latitude,
-          "longitude": position.longitude,
+          "latitude": updatedPosition.latitude,
+          "longitude": updatedPosition.longitude,
           "time": DateTime.now(),
         });
 
@@ -220,8 +234,6 @@ class _StudentScreenState extends State<StudentScreen> {
                     onPressed: pickFromGallery,
                     child: const Text("Upload from Gallery"),
                   ),
-
-                  // 🔥 ONLY NEW BUTTON ADDED
                   const SizedBox(height: 15),
                   ElevatedButton(
                     onPressed: () {
@@ -235,7 +247,6 @@ class _StudentScreenState extends State<StudentScreen> {
                     child: const Text("My Attendance"),
                   ),
                   const SizedBox(height: 15),
-
                   ElevatedButton(
                     onPressed: () {
                       Navigator.push(
@@ -246,6 +257,18 @@ class _StudentScreenState extends State<StudentScreen> {
                       );
                     },
                     child: const Text("Attendance Percentage"),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      await FirebaseAuth.instance.signOut();
+
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (_) => LoginScreen()),
+                        (route) => false,
+                      );
+                    },
+                    child: const Text("Logout"),
                   ),
                 ],
               ),

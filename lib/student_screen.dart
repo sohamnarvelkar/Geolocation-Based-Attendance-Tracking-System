@@ -13,6 +13,10 @@ import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
+// 🔥 ADD THIS IMPORT
+import 'my_attendance_screen.dart';
+import 'attendance_percentage_screen.dart';
+
 // 🔥 DEVICE ID FUNCTION
 Future<String> getDeviceId() async {
   final prefs = await SharedPreferences.getInstance();
@@ -38,7 +42,7 @@ class _StudentScreenState extends State<StudentScreen> {
   bool scanning = false;
   bool scannedOnce = false;
 
-  // 📍 Attendance Logic
+  // 📍 Attendance Logic (UNCHANGED)
   Future<void> markAttendance(String qrData) async {
     try {
       var data = jsonDecode(qrData);
@@ -49,7 +53,6 @@ class _StudentScreenState extends State<StudentScreen> {
 
       final user = FirebaseAuth.instance.currentUser;
 
-      // 🔥 CHECK IF CLASS IS CLOSED
       var classDoc = await FirebaseFirestore.instance
           .collection("classes")
           .doc(classId)
@@ -89,10 +92,8 @@ class _StudentScreenState extends State<StudentScreen> {
       if (distance <= 11) {
         String studentId = user!.uid;
 
-        // 🔥 GET DEVICE ID
         String deviceId = await getDeviceId();
 
-        // 🔒 CHECK 1: STUDENT ALREADY MARKED
         var existingStudent = await FirebaseFirestore.instance
             .collection("attendance")
             .where("studentId", isEqualTo: studentId)
@@ -106,7 +107,6 @@ class _StudentScreenState extends State<StudentScreen> {
           return;
         }
 
-        // 🔒 CHECK 2: DEVICE ALREADY USED
         var existingDevice = await FirebaseFirestore.instance
             .collection("attendance")
             .where("deviceId", isEqualTo: deviceId)
@@ -120,13 +120,12 @@ class _StudentScreenState extends State<StudentScreen> {
           return;
         }
 
-        // ✅ SAVE ATTENDANCE
         await FirebaseFirestore.instance.collection("attendance").add({
           "studentId": studentId,
           "studentEmail": user.email ?? "N/A",
           "studentName": user.email ?? "Student",
           "classId": classId,
-          "deviceId": deviceId, // 🔥 IMPORTANT
+          "deviceId": deviceId,
           "latitude": position.latitude,
           "longitude": position.longitude,
           "time": DateTime.now(),
@@ -153,7 +152,7 @@ class _StudentScreenState extends State<StudentScreen> {
     });
   }
 
-  // 📷 Gallery QR Scan
+  // 📷 Gallery QR Scan (UNCHANGED)
   Future<void> pickFromGallery() async {
     try {
       final ImagePicker picker = ImagePicker();
@@ -220,6 +219,33 @@ class _StudentScreenState extends State<StudentScreen> {
                   ElevatedButton(
                     onPressed: pickFromGallery,
                     child: const Text("Upload from Gallery"),
+                  ),
+
+                  // 🔥 ONLY NEW BUTTON ADDED
+                  const SizedBox(height: 15),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const MyAttendanceScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text("My Attendance"),
+                  ),
+                  const SizedBox(height: 15),
+
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AttendancePercentageScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text("Attendance Percentage"),
                   ),
                 ],
               ),

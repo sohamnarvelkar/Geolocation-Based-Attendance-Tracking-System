@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'attendance_list_screen.dart';
 import 'past_classes_screen.dart';
+import 'teacher_students_screen.dart';
 
 class TeacherDashboard extends StatefulWidget {
   final String name;
@@ -168,6 +169,20 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                     onPressed: createClass,
                     child: const Text("Start Class"),
                   ),
+            const SizedBox(height: 10),
+
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        TeacherStudentsScreen(teacherName: widget.name),
+                  ),
+                );
+              },
+              child: const Text("My Students"),
+            ),
 
             const SizedBox(height: 10),
 

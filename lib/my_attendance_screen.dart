@@ -81,13 +81,32 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
 
                     DateTime time = data['time'].toDate();
 
-                    return Card(
-                      margin: const EdgeInsets.all(8),
-                      child: ListTile(
-                        leading: const Icon(Icons.check_circle, color: Colors.green),
-                        title: Text("Class: ${data['classId']}"),
-                        subtitle: Text("Time: $time"),
-                      ),
+                    // 🔥 FETCH SUBJECT FROM CLASSES
+                    return FutureBuilder<DocumentSnapshot>(
+                      future: FirebaseFirestore.instance
+                          .collection("classes")
+                          .doc(data['classId'])
+                          .get(),
+                      builder: (context, classSnapshot) {
+                        String subject = "Loading...";
+
+                        if (classSnapshot.hasData &&
+                            classSnapshot.data!.exists) {
+                          var classData = classSnapshot.data!.data()
+                              as Map<String, dynamic>;
+                          subject = classData['subject'] ?? "No Subject";
+                        }
+
+                        return Card(
+                          margin: const EdgeInsets.all(8),
+                          child: ListTile(
+                            leading: const Icon(Icons.check_circle,
+                                color: Colors.green),
+                            title: Text(subject), // ✅ SUBJECT HERE
+                            subtitle: Text("Time: $time"),
+                          ),
+                        );
+                      },
                     );
                   },
                 );

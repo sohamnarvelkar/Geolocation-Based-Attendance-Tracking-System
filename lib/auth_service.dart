@@ -1,6 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'notification_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -34,11 +33,8 @@ class AuthService {
     }
   }
 
-  // LOGOUT — clears FCM token so no stale notifications are delivered and
-  // unsubscribes from all role topics before signing out.
+  // LOGOUT
   Future<void> logout() async {
-    await NotificationService.unsubscribeFromAllTopics();
-    await NotificationService.clearToken();
     await _auth.signOut();
   }
 }

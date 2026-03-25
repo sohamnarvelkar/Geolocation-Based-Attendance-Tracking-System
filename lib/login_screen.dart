@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import 'notification_service.dart';
 import 'register_screen.dart';
 import 'teacher_dashboard.dart';
 import 'student_screen.dart';
@@ -45,11 +44,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
       String role = data['role'] ?? "student";
       String name = data['name'] ?? "User";
-
-      // Save the FCM token for this device and subscribe to the role topic
-      // so the user receives push notifications relevant to their role.
-      await NotificationService.saveToken();
-      await NotificationService.subscribeToRoleTopic(role);
 
       if (role == "teacher") {
         Navigator.pushReplacement(

@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
@@ -46,7 +45,6 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         "classId": id,
         "subject": subjectController.text.trim(),
         "teacherName": widget.name,
-        "teacherUid": FirebaseAuth.instance.currentUser?.uid ?? "",
         "latitude": position.latitude,
         "longitude": position.longitude,
         "radius": 50,

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'notification_service.dart';
+
 class RegisterScreen extends StatefulWidget {
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -41,6 +43,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text("Registered Successfully ✅")));
+
+      // Save the FCM token and subscribe to the appropriate topic immediately
+      // after registration so the user starts receiving notifications.
+      await NotificationService.saveToken();
+      await NotificationService.subscribeToRoleTopic(role);
 
       Navigator.pop(context); // go back to login
     } catch (e) {

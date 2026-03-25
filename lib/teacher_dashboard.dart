@@ -73,12 +73,17 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     setState(() => loading = false);
   }
 
-  // 🔥 CLOSE QR
+  // 🔥 CLOSE QR (UPDATED)
   Future<void> closeQr() async {
     endTime = DateTime.now();
 
     await FirebaseFirestore.instance.collection("classes").doc(classId).update({
       "endTime": endTime,
+    });
+
+    // 🔥 HIDE QR AFTER CLOSING
+    setState(() {
+      qrData = null;
     });
 
     ScaffoldMessenger.of(
@@ -116,8 +121,8 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
 
       final picture = recorder.endRecording();
       final finalImage = await picture.toImage(
-        totalSize.toInt(), // ✅ FIXED
-        totalSize.toInt(), // ✅ FIXED
+        totalSize.toInt(),
+        totalSize.toInt(),
       );
 
       final byteData = await finalImage.toByteData(
@@ -183,7 +188,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
             if (qrData != null)
               Column(
                 children: [
-                  // ✅ PERFECT QR (LIKE FIRST IMAGE)
+                  // ✅ PERFECT QR
                   Container(
                     color: Colors.white,
                     padding: const EdgeInsets.all(30),

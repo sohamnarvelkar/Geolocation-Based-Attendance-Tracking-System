@@ -9,6 +9,24 @@ import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart'
     as mlkit;
 
+// 🔥 NEW IMPORTS
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
+
+// 🔥 DEVICE ID FUNCTION
+Future<String> getDeviceId() async {
+  final prefs = await SharedPreferences.getInstance();
+
+  String? deviceId = prefs.getString('device_id');
+
+  if (deviceId == null) {
+    deviceId = const Uuid().v4();
+    await prefs.setString('device_id', deviceId);
+  }
+
+  return deviceId;
+}
+
 class StudentScreen extends StatefulWidget {
   const StudentScreen({super.key});
 
@@ -31,8 +49,33 @@ class _StudentScreenState extends State<StudentScreen> {
 
       final user = FirebaseAuth.instance.currentUser;
 
+      // 🔥 CHECK IF CLASS IS CLOSED
+      var classDoc = await FirebaseFirestore.instance
+          .collection("classes")
+          .doc(classId)
+          .get();
+
+      if (!classDoc.exists) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Invalid Class ❌")));
+        return;
+      }
+
+      var classData = classDoc.data()!;
+
+      if (classData["endTime"] != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("QR Expired or Closed ❌")));
+        return;
+      }
+
       await Geolocator.requestPermission();
-      Position position = await Geolocator.getCurrentPosition();
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
 
       double distance = Geolocator.distanceBetween(
         teacherLat,
@@ -41,36 +84,57 @@ class _StudentScreenState extends State<StudentScreen> {
         position.longitude,
       );
 
+      print("Distance: $distance");
+
       if (distance <= 11) {
         String studentId = user!.uid;
 
-        // 🔒 Prevent duplicate
-        var existing = await FirebaseFirestore.instance
+        // 🔥 GET DEVICE ID
+        String deviceId = await getDeviceId();
+
+        // 🔒 CHECK 1: STUDENT ALREADY MARKED
+        var existingStudent = await FirebaseFirestore.instance
             .collection("attendance")
             .where("studentId", isEqualTo: studentId)
             .where("classId", isEqualTo: classId)
             .get();
 
-        if (existing.docs.isNotEmpty) {
+        if (existingStudent.docs.isNotEmpty) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: Text("Already Marked ❗")));
-        } else {
-          await FirebaseFirestore.instance.collection("attendance").add({
-            "studentId": studentId,
-            "studentEmail": user.email ?? "N/A", // ✅ FIX
-            "studentName":
-                user.email ?? "Student", // ✅ FIX (use real name later)
-            "classId": classId,
-            "latitude": position.latitude,
-            "longitude": position.longitude,
-            "time": DateTime.now(), // ✅ FIX
-          });
-
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text("Attendance Marked ✅")));
+          return;
         }
+
+        // 🔒 CHECK 2: DEVICE ALREADY USED
+        var existingDevice = await FirebaseFirestore.instance
+            .collection("attendance")
+            .where("deviceId", isEqualTo: deviceId)
+            .where("classId", isEqualTo: classId)
+            .get();
+
+        if (existingDevice.docs.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("This device already used ❌")),
+          );
+          return;
+        }
+
+        // ✅ SAVE ATTENDANCE
+        await FirebaseFirestore.instance.collection("attendance").add({
+          "studentId": studentId,
+          "studentEmail": user.email ?? "N/A",
+          "studentName": user.email ?? "Student",
+          "classId": classId,
+          "deviceId": deviceId, // 🔥 IMPORTANT
+          "latitude": position.latitude,
+          "longitude": position.longitude,
+          "time": DateTime.now(),
+        });
+
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Attendance Marked ✅")));
       } else {
         ScaffoldMessenger.of(
           context,

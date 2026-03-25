@@ -16,20 +16,49 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
   Widget build(BuildContext context) {
     String studentId = FirebaseAuth.instance.currentUser!.uid;
 
+    // Local color variables for the theme
+    const Color primaryGreen = Color(0xFF3E6B4A);
+    const Color lightGreen = Color(0xFF6F9A73);
+    const Color offWhiteBackground = Color(0xFFF9F1DF);
+    const Color darkText = Color(0xFF2A3B2F);
+    const Color beigeAccent = Color(0xFFE2CFA9);
+
     return Scaffold(
-      appBar: AppBar(title: const Text("My Attendance")),
+      backgroundColor: offWhiteBackground,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          "Daily Attendance",
+          style: TextStyle(color: darkText, fontWeight: FontWeight.bold),
+        ),
+        iconTheme: const IconThemeData(color: darkText),
+      ),
       body: Column(
         children: [
-          // 📅 DATE PICKER
+          // 📅 MODERN DATE PICKER BUTTON
           Padding(
-            padding: const EdgeInsets.all(10),
-            child: ElevatedButton(
-              onPressed: () async {
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+            child: InkWell(
+              onTap: () async {
                 DateTime? picked = await showDatePicker(
                   context: context,
                   initialDate: selectedDate,
                   firstDate: DateTime(2023),
                   lastDate: DateTime.now(),
+                  builder: (context, child) {
+                    return Theme(
+                      data: Theme.of(context).copyWith(
+                        colorScheme: const ColorScheme.light(
+                          primary: primaryGreen,
+                          onPrimary: Colors.white,
+                          onSurface: darkText,
+                        ),
+                      ),
+                      child: child!,
+                    );
+                  },
                 );
 
                 if (picked != null) {
@@ -38,13 +67,43 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
                   });
                 }
               },
-              child: Text(
-                "Select Date: ${selectedDate.toLocal().toString().split(' ')[0]}",
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: primaryGreen,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryGreen.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_month_rounded, color: offWhiteBackground),
+                        const SizedBox(width: 12),
+                        Text(
+                          "Date: ${selectedDate.toLocal().toString().split(' ')[0]}",
+                          style: const TextStyle(
+                            color: offWhiteBackground,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Icon(Icons.keyboard_arrow_down_rounded, color: offWhiteBackground),
+                  ],
+                ),
               ),
             ),
           ),
-
-          const Divider(),
 
           // 📊 ATTENDANCE LIST
           Expanded(
@@ -55,7 +114,9 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
                   .snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(
+                    child: CircularProgressIndicator(color: primaryGreen),
+                  );
                 }
 
                 var docs = snapshot.data!.docs.where((doc) {
@@ -71,15 +132,41 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
                 }).toList();
 
                 if (docs.isEmpty) {
-                  return const Center(child: Text("No Attendance Found 📭"));
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.event_busy_rounded, size: 80, color: beigeAccent),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "No Classes Attended",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: darkText,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          "Take a break or check another date.",
+                          style: TextStyle(color: lightGreen),
+                        ),
+                      ],
+                    ),
+                  );
                 }
 
                 return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                   itemCount: docs.length,
                   itemBuilder: (context, index) {
                     var data = docs[index].data() as Map<String, dynamic>;
 
                     DateTime time = data['time'].toDate();
+                    
+                    // Format time cleanly (HH:MM)
+                    String formattedTime = 
+                        "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}";
 
                     // 🔥 FETCH SUBJECT FROM CLASSES
                     return FutureBuilder<DocumentSnapshot>(
@@ -97,13 +184,58 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
                           subject = classData['subject'] ?? "No Subject";
                         }
 
-                        return Card(
-                          margin: const EdgeInsets.all(8),
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.03),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
                           child: ListTile(
-                            leading: const Icon(Icons.check_circle,
-                                color: Colors.green),
-                            title: Text(subject), // ✅ SUBJECT HERE
-                            subtitle: Text("Time: $time"),
+                            contentPadding: const EdgeInsets.all(16),
+                            leading: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: beigeAccent.withOpacity(0.3),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.verified_rounded,
+                                color: primaryGreen,
+                                size: 28,
+                              ),
+                            ),
+                            title: Text(
+                              subject, // ✅ SUBJECT HERE
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: darkText,
+                              ),
+                            ),
+                            subtitle: Padding(
+                              padding: const EdgeInsets.only(top: 4.0),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.access_time_rounded, size: 14, color: lightGreen),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    formattedTime,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: lightGreen,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         );
                       },

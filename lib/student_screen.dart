@@ -15,7 +15,6 @@ import 'package:uuid/uuid.dart';
 import 'my_attendance_screen.dart';
 import 'attendance_percentage_screen.dart';
 import 'login_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 // 🔥 DEVICE ID FUNCTION
 Future<String> getDeviceId() async {
@@ -145,9 +144,20 @@ class _StudentScreenState extends State<StudentScreen> {
           "time": DateTime.now(),
         });
 
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Attendance Marked ✅")));
+        // Custom styled prominent SnackBar for success
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              "Attendance Marked ✅",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+              textAlign: TextAlign.center,
+            ),
+            backgroundColor: const Color(0xFF3E6B4A), // primaryGreen
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          )
+        );
       } else {
         ScaffoldMessenger.of(
           context,
@@ -195,84 +205,218 @@ class _StudentScreenState extends State<StudentScreen> {
     }
   }
 
+  // Helper widget to create uniform, styled buttons
+  Widget _buildDashboardMenuButton({
+    required String title,
+    required IconData icon,
+    required VoidCallback onPressed,
+    required Color bgColor,
+    required Color fgColor,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: SizedBox(
+        width: double.infinity,
+        height: 65,
+        child: ElevatedButton.icon(
+          onPressed: onPressed,
+          icon: Icon(icon, size: 28),
+          label: Text(
+            title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: bgColor,
+            foregroundColor: fgColor,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Local color variables for the theme
+    const Color primaryGreen = Color(0xFF3E6B4A);
+    const Color lightGreen = Color(0xFF6F9A73);
+    const Color offWhiteBackground = Color(0xFFF9F1DF);
+    const Color darkText = Color(0xFF2A3B2F);
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Student Dashboard")),
-      body: Center(
-        child: scanning
-            ? MobileScanner(
-                onDetect: (barcodeCapture) {
-                  if (scannedOnce) return;
+      backgroundColor: offWhiteBackground,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          "Student Dashboard",
+          style: TextStyle(color: darkText, fontWeight: FontWeight.bold),
+        ),
+        iconTheme: const IconThemeData(color: darkText),
+      ),
+      body: scanning
+          ? Stack(
+              children: [
+                MobileScanner(
+                  onDetect: (barcodeCapture) {
+                    if (scannedOnce) return;
 
-                  final barcodes = barcodeCapture.barcodes;
+                    final barcodes = barcodeCapture.barcodes;
 
-                  for (final barcode in barcodes) {
-                    final String? code = barcode.rawValue;
+                    for (final barcode in barcodes) {
+                      final String? code = barcode.rawValue;
 
-                    if (code != null) {
-                      scannedOnce = true;
-                      markAttendance(code);
-                      break;
+                      if (code != null) {
+                        scannedOnce = true;
+                        markAttendance(code);
+                        break;
+                      }
                     }
-                  }
-                },
-              )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton(
+                  },
+                ),
+                // Add a back button overlay when scanning
+                Positioned(
+                  top: 40,
+                  left: 16,
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white, size: 32),
                     onPressed: () {
                       setState(() {
-                        scanning = true;
+                        scanning = false;
                       });
                     },
-                    child: const Text("Scan QR"),
                   ),
-                  const SizedBox(height: 15),
-                  ElevatedButton(
-                    onPressed: pickFromGallery,
-                    child: const Text("Upload from Gallery"),
+                ),
+                const Positioned(
+                  bottom: 40,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Text(
+                      "Scanning QR Code...",
+                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
                   ),
-                  const SizedBox(height: 15),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const MyAttendanceScreen(),
-                        ),
-                      );
-                    },
-                    child: const Text("My Attendance"),
-                  ),
-                  const SizedBox(height: 15),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const AttendancePercentageScreen(),
-                        ),
-                      );
-                    },
-                    child: const Text("Attendance Percentage"),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      await FirebaseAuth.instance.signOut();
+                )
+              ],
+            )
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Icon(
+                      Icons.school_rounded,
+                      size: 80,
+                      color: primaryGreen,
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      "Ready for Class?",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: darkText,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      "Select an option below to manage your attendance.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: lightGreen,
+                      ),
+                    ),
+                    const SizedBox(height: 40),
 
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(builder: (_) => LoginScreen()),
-                        (route) => false,
-                      );
-                    },
-                    child: const Text("Logout"),
-                  ),
-                ],
+                    // Main Action Buttons
+                    _buildDashboardMenuButton(
+                      title: "Scan QR",
+                      icon: Icons.qr_code_scanner_rounded,
+                      bgColor: primaryGreen,
+                      fgColor: offWhiteBackground,
+                      onPressed: () {
+                        setState(() {
+                          scanning = true;
+                        });
+                      },
+                    ),
+
+                    _buildDashboardMenuButton(
+                      title: "Upload from Gallery",
+                      icon: Icons.image_rounded,
+                      bgColor: Colors.white,
+                      fgColor: darkText,
+                      onPressed: pickFromGallery,
+                    ),
+
+                    _buildDashboardMenuButton(
+                      title: "My Attendance",
+                      icon: Icons.history_rounded,
+                      bgColor: Colors.white,
+                      fgColor: darkText,
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const MyAttendanceScreen(),
+                          ),
+                        );
+                      },
+                    ),
+
+                    _buildDashboardMenuButton(
+                      title: "Attendance Percentage",
+                      icon: Icons.pie_chart_rounded,
+                      bgColor: Colors.white,
+                      fgColor: darkText,
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AttendancePercentageScreen(),
+                          ),
+                        );
+                      },
+                    ),
+
+                    const Spacer(),
+
+                    // Logout Button (Styled slightly differently to stand out)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 55,
+                      child: TextButton.icon(
+                        onPressed: () async {
+                          await FirebaseAuth.instance.signOut();
+
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(builder: (_) => const LoginScreen()),
+                            (route) => false,
+                          );
+                        },
+                        icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+                        label: const Text(
+                          "Logout",
+                          style: TextStyle(fontSize: 16, color: Colors.redAccent, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-      ),
+            ),
     );
   }
 }
